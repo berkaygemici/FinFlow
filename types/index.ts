@@ -48,18 +48,9 @@ export interface BudgetAlert {
   status: "ok" | "warning" | "exceeded";
 }
 
-export const DEFAULT_CATEGORIES = [
-  "Bars & Restaurants",
-  "Transport",
-  "Groceries",
-  "Shopping",
-  "Media & Telecom",
-  "Automotive",
-  "Leisure",
-  "Health & Insurance",
-  "Salary",
-  "Other",
-] as const;
+import categoriesConfig from "../config/categories.json";
+
+export const DEFAULT_CATEGORIES = categoriesConfig.categories as readonly string[];
 
 export type CategoryType = typeof DEFAULT_CATEGORIES[number];
 

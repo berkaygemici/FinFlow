@@ -1,5 +1,6 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { Transaction, Statement } from '@/types';
+import categoriesConfig from '@/config/categories.json';
 
 // Configure PDF.js worker - using local worker file to avoid CORS issues
 if (typeof window !== 'undefined') {
@@ -17,76 +18,34 @@ export class PDFParser {
     const fullDesc = (descText || description).toLowerCase();
 
     // First check if N26 has already provided a category (German categories)
-    if (fullDesc.includes('• bars & restaurants')) return 'Bars & Restaurants';
-    if (fullDesc.includes('• lebensmittel')) return 'Groceries';
-    if (fullDesc.includes('• transport')) return 'Transport';
-    if (fullDesc.includes('• medien & telekom')) return 'Media & Telecom';
-    if (fullDesc.includes('• freizeit')) return 'Leisure';
-    if (fullDesc.includes('• shopping')) return 'Shopping';
-    if (fullDesc.includes('• auto')) return 'Transport';
-    if (fullDesc.includes('• sonstiges')) return 'Other';
-
-    // Salary/Income patterns
-    if (amount > 0 && (desc.includes('gehalt') || desc.includes('salary') || desc.includes('lohn') ||
-        fullDesc.includes('gutschriften'))) {
-      return 'Salary';
+    const n26Categories = categoriesConfig.categorizationRules.n26BankCategories;
+    for (const [pattern, category] of Object.entries(n26Categories)) {
+      if (fullDesc.includes(pattern)) {
+        return category;
+      }
     }
 
-    // Insurance patterns
-    if (desc.includes('barmer') || desc.includes('versicherung') || desc.includes('insurance')) {
-      return 'Health & Insurance';
+    // Check merchant patterns for each category
+    const merchantPatterns = categoriesConfig.categorizationRules.merchantPatterns;
+
+    // Special handling for Salary - only match if amount is positive (income)
+    if (amount > 0 && merchantPatterns['Salary']) {
+      for (const pattern of merchantPatterns['Salary']) {
+        if (desc.includes(pattern) || fullDesc.includes(pattern)) {
+          return 'Salary';
+        }
+      }
     }
 
-    // Groceries patterns
-    if (desc.includes('rewe') || desc.includes('edeka') || desc.includes('aldi') ||
-        desc.includes('lidl') || desc.includes('kaufland') || desc.includes('lebensmittel') ||
-        desc.includes('market')) {
-      return 'Groceries';
-    }
+    // Check all other categories
+    for (const [category, patterns] of Object.entries(merchantPatterns)) {
+      if (category === 'Salary') continue; // Already handled above
 
-    // Transport patterns
-    if (desc.includes('uber') || desc.includes('taxi') || desc.includes('bvg') ||
-        desc.includes('transport') || desc.includes('tankstelle') || desc.includes('shell') ||
-        desc.includes('flixbus') || desc.includes('navigo') || desc.includes('ratp') ||
-        desc.includes('delijn') || desc.includes('stib') || desc.includes('mivb')) {
-      return 'Transport';
-    }
-
-    // Restaurants patterns
-    if (desc.includes('restaurant') || desc.includes('cafe') || desc.includes('bar') ||
-        desc.includes('food') || desc.includes('pizza') || desc.includes('burger') ||
-        desc.includes('coffee') || desc.includes('kahve') || desc.includes('kafe') ||
-        desc.includes('pide') || desc.includes('pastanesi')) {
-      return 'Bars & Restaurants';
-    }
-
-    // Shopping patterns
-    if (desc.includes('amazon') || desc.includes('shop') || desc.includes('store') ||
-        desc.includes('kaufhaus') || desc.includes('zara') || desc.includes('h&m')) {
-      return 'Shopping';
-    }
-
-    // Media & Telecom patterns
-    if (desc.includes('telefonica') || desc.includes('vodafone') || desc.includes('telekom') ||
-        desc.includes('spotify') || desc.includes('netflix') || desc.includes('revenuecat')) {
-      return 'Media & Telecom';
-    }
-
-    // Leisure patterns
-    if (desc.includes('kino') || desc.includes('cinema') || desc.includes('theater') ||
-        desc.includes('gym') || desc.includes('fitness') || desc.includes('sport') ||
-        desc.includes('beach') || desc.includes('otelcilik')) {
-      return 'Leisure';
-    }
-
-    // Student/Education patterns
-    if (desc.includes('studentenwerk') || desc.includes('student') || desc.includes('schueler')) {
-      return 'Education';
-    }
-
-    // N26 specific patterns
-    if (desc.includes('n26 ratenzahlung') || fullDesc.includes('belastungen')) {
-      return 'Banking Fees';
+      for (const pattern of patterns) {
+        if (desc.includes(pattern)) {
+          return category;
+        }
+      }
     }
 
     return 'Other';

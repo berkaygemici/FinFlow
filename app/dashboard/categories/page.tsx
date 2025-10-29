@@ -17,19 +17,11 @@ import { Badge } from "@/components/ui/badge";
 import { CategorySpending } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import { PieChartIcon } from "lucide-react";
+import categoriesConfig from "@/config/categories.json";
 
-const COLORS = [
-  "hsl(221, 83%, 53%)",
-  "hsl(142, 76%, 36%)",
-  "hsl(0, 84%, 60%)",
-  "hsl(48, 96%, 53%)",
-  "hsl(262, 52%, 47%)",
-  "hsl(31, 97%, 72%)",
-  "hsl(199, 89%, 48%)",
-  "hsl(326, 78%, 68%)",
-  "hsl(45, 93%, 47%)",
-  "hsl(168, 76%, 42%)",
-];
+const getCategoryColor = (category: string): string => {
+  return categoriesConfig.categoryColors[category as keyof typeof categoriesConfig.categoryColors] || "hsl(0, 0%, 60%)";
+};
 
 export default function CategoriesPage() {
   const statements = useLiveQuery(() => db.statements.toArray());
@@ -126,7 +118,7 @@ export default function CategoriesPage() {
                     {pieData.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
+                        fill={getCategoryColor(entry.name)}
                       />
                     ))}
                   </Pie>
@@ -167,7 +159,7 @@ export default function CategoriesPage() {
                     <div className="flex items-center gap-3">
                       <div
                         className="w-4 h-4 rounded-full"
-                        style={{ backgroundColor: COLORS[idx % COLORS.length] }}
+                        style={{ backgroundColor: getCategoryColor(cat.category) }}
                       />
                       <div>
                         <p className="font-medium">{cat.category}</p>

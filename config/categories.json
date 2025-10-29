@@ -1,0 +1,126 @@
+{
+  "categories": [
+    "Bars & Restaurants",
+    "Transport",
+    "Groceries",
+    "Shopping",
+    "Media & Telecom",
+    "Automotive",
+    "Leisure",
+    "Health & Insurance",
+    "Salary",
+    "Education",
+    "Banking Fees",
+    "Other"
+  ],
+  "categoryColors": {
+    "Bars & Restaurants": "hsl(221, 83%, 53%)",
+    "Transport": "hsl(142, 76%, 36%)",
+    "Groceries": "hsl(0, 84%, 60%)",
+    "Shopping": "hsl(48, 96%, 53%)",
+    "Media & Telecom": "hsl(262, 52%, 47%)",
+    "Automotive": "hsl(31, 97%, 72%)",
+    "Leisure": "hsl(199, 89%, 48%)",
+    "Health & Insurance": "hsl(326, 78%, 68%)",
+    "Salary": "hsl(45, 93%, 47%)",
+    "Education": "hsl(168, 76%, 42%)",
+    "Banking Fees": "hsl(280, 67%, 55%)",
+    "Other": "hsl(0, 0%, 60%)"
+  },
+  "categorizationRules": {
+    "n26BankCategories": {
+      "• bars & restaurants": "Bars & Restaurants",
+      "• lebensmittel": "Groceries",
+      "• transport": "Transport",
+      "• medien & telekom": "Media & Telecom",
+      "• freizeit": "Leisure",
+      "• shopping": "Shopping",
+      "• auto": "Transport",
+      "• sonstiges": "Other"
+    },
+    "merchantPatterns": {
+      "Salary": [
+        "gehalt",
+        "salary",
+        "lohn",
+        "gutschriften"
+      ],
+      "Health & Insurance": [
+        "barmer",
+        "versicherung",
+        "insurance"
+      ],
+      "Groceries": [
+        "rewe",
+        "edeka",
+        "aldi",
+        "lidl",
+        "kaufland",
+        "lebensmittel",
+        "market"
+      ],
+      "Transport": [
+        "uber",
+        "taxi",
+        "bvg",
+        "transport",
+        "tankstelle",
+        "shell",
+        "flixbus",
+        "navigo",
+        "ratp",
+        "delijn",
+        "stib",
+        "mivb"
+      ],
+      "Bars & Restaurants": [
+        "restaurant",
+        "cafe",
+        "bar",
+        "food",
+        "pizza",
+        "burger",
+        "coffee",
+        "kahve",
+        "kafe",
+        "pide",
+        "pastanesi"
+      ],
+      "Shopping": [
+        "amazon",
+        "shop",
+        "store",
+        "kaufhaus",
+        "zara",
+        "h&m"
+      ],
+      "Media & Telecom": [
+        "telefonica",
+        "vodafone",
+        "telekom",
+        "spotify",
+        "netflix",
+        "revenuecat"
+      ],
+      "Leisure": [
+        "kino",
+        "cinema",
+        "theater",
+        "gym",
+        "fitness",
+        "sport",
+        "beach",
+        "otelcilik"
+      ],
+      "Education": [
+        "studentenwerk",
+        "student",
+        "schueler"
+      ],
+      "Banking Fees": [
+        "n26 ratenzahlung",
+        "belastungen"
+      ]
+    }
+  }
+}
