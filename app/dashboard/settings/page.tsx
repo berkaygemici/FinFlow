@@ -9,6 +9,7 @@ import {
   Trash2,
   Download,
   FileDown,
+  AlertTriangle,
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -25,6 +26,7 @@ export default function SettingsPage() {
   const statements = useLiveQuery(() => db.statements.toArray());
 
   const [showAddRule, setShowAddRule] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [newRule, setNewRule] = useState({
     pattern: "",
     category: "",
@@ -47,6 +49,13 @@ export default function SettingsPage() {
 
   const handleDeleteRule = async (id: string) => {
     await db.categoryRules.delete(id);
+  };
+
+  const handleDeleteAllData = async () => {
+    await db.statements.clear();
+    await db.categoryRules.clear();
+    await db.budgets.clear();
+    setShowDeleteConfirm(false);
   };
 
   const handleExportCSV = () => {
@@ -282,6 +291,49 @@ export default function SettingsPage() {
                   <p className="text-sm text-muted-foreground">
                     All data is stored locally in your browser
                   </p>
+                </div>
+              </div>
+
+              {/* Delete All Data Section */}
+              <div className="pt-4 border-t">
+                <div className="flex items-start justify-between p-4 rounded-lg border border-destructive/50 bg-destructive/5">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="w-5 h-5 text-destructive" />
+                      <p className="font-medium text-destructive">Danger Zone</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Permanently delete all your financial data including statements, transactions, category rules, and budgets. This action cannot be undone.
+                    </p>
+                    {!showDeleteConfirm ? (
+                      <Button
+                        variant="destructive"
+                        onClick={() => setShowDeleteConfirm(true)}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete All Data
+                      </Button>
+                    ) : (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex gap-2"
+                      >
+                        <Button
+                          variant="destructive"
+                          onClick={handleDeleteAllData}
+                        >
+                          Confirm Delete
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowDeleteConfirm(false)}
+                        >
+                          Cancel
+                        </Button>
+                      </motion.div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
