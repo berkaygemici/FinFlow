@@ -8,6 +8,7 @@
     "Automotive",
     "Leisure",
     "Health & Insurance",
+    "Rent",
     "Salary",
     "Education",
     "Banking Fees",
@@ -22,6 +23,7 @@
     "Automotive": "hsl(31, 97%, 72%)",
     "Leisure": "hsl(199, 89%, 48%)",
     "Health & Insurance": "hsl(326, 78%, 68%)",
+    "Rent": "hsl(25, 95%, 53%)",
     "Salary": "hsl(45, 93%, 47%)",
     "Education": "hsl(168, 76%, 42%)",
     "Banking Fees": "hsl(280, 67%, 55%)",
@@ -112,8 +114,12 @@
         "beach",
         "otelcilik"
       ],
-      "Education": [
+      "Rent": [
         "studentenwerk",
+        "miete",
+        "rent"
+      ],
+      "Education": [
         "student",
         "schueler"
       ],

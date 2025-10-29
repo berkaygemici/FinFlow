@@ -14,9 +14,9 @@ import {
 import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CategorySpending } from "@/types";
-import { formatCurrency } from "@/lib/utils";
-import { PieChartIcon } from "lucide-react";
+import { CategorySpending, Transaction } from "@/types";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import { PieChartIcon, ChevronDown, ChevronUp } from "lucide-react";
 import categoriesConfig from "@/config/categories.json";
 
 const getCategoryColor = (category: string): string => {
@@ -27,6 +27,7 @@ export default function CategoriesPage() {
   const statements = useLiveQuery(() => db.statements.toArray());
   const [categoryData, setCategoryData] = useState<CategorySpending[]>([]);
   const [totalExpenses, setTotalExpenses] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   useEffect(() => {
     if (!statements || statements.length === 0) return;
@@ -59,6 +60,32 @@ export default function CategoriesPage() {
     setCategoryData(data);
     setTotalExpenses(total);
   }, [statements]);
+
+  // Get transactions for a specific category
+  const getCategoryTransactions = (category: string) => {
+    if (!statements) return [];
+
+    const transactions: (Transaction & { statementMonth: string })[] = [];
+    statements.forEach((statement) => {
+      statement.transactions
+        .filter((t) => t.type === "expense" && t.category === category)
+        .forEach((transaction) => {
+          transactions.push({
+            ...transaction,
+            statementMonth: `${statement.month} ${statement.year}`,
+          });
+        });
+    });
+
+    // Sort by date (newest first)
+    return transactions.sort((a, b) =>
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  };
+
+  const handleCategoryClick = (category: string) => {
+    setSelectedCategory(selectedCategory === category ? null : category);
+  };
 
   if (!statements || statements.length === 0) {
     return (
@@ -147,35 +174,91 @@ export default function CategoriesPage() {
               <CardDescription>Breakdown by category</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {categoryData.map((cat, idx) => (
-                  <motion.div
-                    key={cat.category}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.3 + idx * 0.05 }}
-                    className="flex items-center justify-between p-4 rounded-lg border hover:bg-accent transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
+              <div className="space-y-2">
+                {categoryData.map((cat, idx) => {
+                  const isExpanded = selectedCategory === cat.category;
+                  const transactions = isExpanded ? getCategoryTransactions(cat.category) : [];
+
+                  return (
+                    <motion.div
+                      key={cat.category}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.3 + idx * 0.05 }}
+                      className="rounded-lg border overflow-hidden"
+                    >
                       <div
-                        className="w-4 h-4 rounded-full"
-                        style={{ backgroundColor: getCategoryColor(cat.category) }}
-                      />
-                      <div>
-                        <p className="font-medium">{cat.category}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {cat.count} transaction{cat.count > 1 ? "s" : ""}
-                        </p>
+                        onClick={() => handleCategoryClick(cat.category)}
+                        className={`flex items-center justify-between p-4 hover:bg-accent transition-colors cursor-pointer ${
+                          isExpanded ? "bg-accent" : ""
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: getCategoryColor(cat.category) }}
+                          />
+                          <div>
+                            <p className="font-medium">{cat.category}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {cat.count} transaction{cat.count > 1 ? "s" : ""}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="font-semibold">{formatCurrency(cat.amount)}</p>
+                            <Badge variant="secondary">
+                              {cat.percentage.toFixed(1)}%
+                            </Badge>
+                          </div>
+                          {isExpanded ? (
+                            <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold">{formatCurrency(cat.amount)}</p>
-                      <Badge variant="secondary">
-                        {cat.percentage.toFixed(1)}%
-                      </Badge>
-                    </div>
-                  </motion.div>
-                ))}
+
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="border-t bg-muted/30"
+                        >
+                          <div className="p-4 space-y-2">
+                            {transactions.map((transaction) => (
+                              <div
+                                key={transaction.id}
+                                className="flex items-center justify-between p-3 rounded-md bg-card border hover:bg-accent transition-colors"
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium truncate text-sm">{transaction.description}</p>
+                                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                                    <span>{formatDate(transaction.date)}</span>
+                                    <span className="hidden sm:inline">{transaction.statementMonth}</span>
+                                    {transaction.originalCurrency && transaction.originalCurrency !== "EUR" && (
+                                      <span>
+                                        {transaction.originalAmount?.toFixed(2)} {transaction.originalCurrency}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right ml-4">
+                                  <p className="font-bold text-red-500">
+                                    {formatCurrency(transaction.amount)}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </motion.div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
