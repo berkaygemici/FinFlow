@@ -15,6 +15,7 @@ import {
   Target,
   TrendingDown,
   ArrowUpCircle,
+  Repeat,
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ const navigation = [
   { name: "Upload", href: "/dashboard/upload", icon: Upload },
   { name: "Income", href: "/dashboard/income", icon: ArrowUpCircle },
   { name: "Expenses", href: "/dashboard/expenses", icon: TrendingDown },
+  { name: "Subscriptions", href: "/dashboard/subscriptions", icon: Repeat },
   { name: "Trends", href: "/dashboard/trends", icon: TrendingUp },
   { name: "Categories", href: "/dashboard/categories", icon: PieChart },
   { name: "Budgets", href: "/dashboard/budgets", icon: Target },

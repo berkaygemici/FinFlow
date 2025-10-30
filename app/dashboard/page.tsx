@@ -13,13 +13,17 @@ import {
   Activity,
   CreditCard,
   Target,
+  Repeat,
+  Calendar,
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
-import { Statement, CategorySpending } from "@/types";
+import { Statement, CategorySpending, RecurringTransactionGroup } from "@/types";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { getRecurringGroups } from "@/lib/process-recurring";
+import { getRecurringSummary } from "@/lib/recurring-detector";
 
 export default function DashboardPage() {
   const statements = useLiveQuery(() => db.statements.toArray());
@@ -33,6 +37,12 @@ export default function DashboardPage() {
     avgTransactionAmount: 0,
     largestExpense: 0,
     monthlyBurnRate: 0,
+  });
+  const [recurringGroups, setRecurringGroups] = useState<RecurringTransactionGroup[]>([]);
+  const [recurringSummary, setRecurringSummary] = useState({
+    totalSubscriptions: 0,
+    monthlyTotal: 0,
+    yearlyTotal: 0,
   });
 
   useEffect(() => {
@@ -90,6 +100,17 @@ export default function DashboardPage() {
       avgTransactionAmount,
       largestExpense,
       monthlyBurnRate,
+    });
+
+    // Detect recurring transactions
+    getRecurringGroups().then((groups) => {
+      setRecurringGroups(groups);
+      const summary = getRecurringSummary(groups);
+      setRecurringSummary({
+        totalSubscriptions: summary.totalSubscriptions,
+        monthlyTotal: summary.monthlyTotal,
+        yearlyTotal: summary.yearlyTotal,
+      });
     });
   }, [statements]);
 
@@ -383,6 +404,102 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {recurringGroups.filter((g) => g.isSubscription).length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+        >
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Your Subscriptions</CardTitle>
+                <Link href="/dashboard/subscriptions">
+                  <Button variant="outline" size="sm">
+                    <Repeat className="w-4 h-4 mr-2" />
+                    View All Recurring
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Summary Cards */}
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="p-4 rounded-lg bg-muted/50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Repeat className="w-4 h-4 text-primary" />
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Total Subscriptions
+                      </p>
+                    </div>
+                    <p className="text-2xl font-bold">{recurringSummary.totalSubscriptions}</p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-muted/50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Calendar className="w-4 h-4 text-orange-500" />
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Monthly Cost
+                      </p>
+                    </div>
+                    <p className="text-2xl font-bold">
+                      {formatCurrency(recurringSummary.monthlyTotal)}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-muted/50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingDown className="w-4 h-4 text-red-500" />
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Yearly Cost
+                      </p>
+                    </div>
+                    <p className="text-2xl font-bold">
+                      {formatCurrency(recurringSummary.yearlyTotal)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Top Subscriptions */}
+                <div className="space-y-3 mt-4">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Top Subscriptions
+                  </p>
+                  {recurringGroups
+                    .filter((g) => g.isSubscription)
+                    .slice(0, 5)
+                    .map((group) => (
+                      <div
+                        key={group.id}
+                        className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
+                            <Repeat className="w-5 h-5 text-orange-500" />
+                          </div>
+                          <div>
+                            <p className="font-medium capitalize">{group.merchantName}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {group.frequency} • {group.category}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">
+                            {formatCurrency(group.averageAmount)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {group.transactions.length} payments
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
     </div>
   );
 }

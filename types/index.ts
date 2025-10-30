@@ -11,6 +11,11 @@ export interface Transaction {
   exchangeRate?: number;
   iban?: string;
   reference?: string;
+  // Recurring transaction fields
+  isRecurring?: boolean;
+  recurringGroupId?: string;
+  recurringFrequency?: "weekly" | "monthly" | "yearly";
+  merchantName?: string;
 }
 
 export interface Statement {
@@ -91,4 +96,17 @@ export interface SavedFilter {
   filters: TransactionFilters;
   createdAt: Date;
   lastUsed?: Date;
+}
+
+export interface RecurringTransactionGroup {
+  id: string;
+  merchantName: string;
+  category: string;
+  averageAmount: number;
+  frequency: "weekly" | "monthly" | "yearly";
+  transactions: Transaction[];
+  isSubscription: boolean;
+  nextExpectedDate?: Date;
+  lastTransactionDate: Date;
+  variance: number; // Amount variance percentage
 }
