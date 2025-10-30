@@ -11,17 +11,17 @@ const sampleMerchants = {
     { name: "GitHub Pro", amount: 7.0, category: "Software" },
   ],
   restaurants: [
-    { name: "Starbucks", category: "Food & Dining", range: [4, 12] },
-    { name: "Chipotle", category: "Food & Dining", range: [10, 18] },
-    { name: "Local Cafe", category: "Food & Dining", range: [8, 25] },
-    { name: "Pizza Place", category: "Food & Dining", range: [15, 30] },
-    { name: "Sushi Restaurant", category: "Food & Dining", range: [20, 50] },
+    { name: "Starbucks", category: "Food & Dining", range: [4, 12] as [number, number] },
+    { name: "Chipotle", category: "Food & Dining", range: [10, 18] as [number, number] },
+    { name: "Local Cafe", category: "Food & Dining", range: [8, 25] as [number, number] },
+    { name: "Pizza Place", category: "Food & Dining", range: [15, 30] as [number, number] },
+    { name: "Sushi Restaurant", category: "Food & Dining", range: [20, 50] as [number, number] },
   ],
   shopping: [
-    { name: "Amazon", category: "Shopping", range: [20, 150] },
-    { name: "Target", category: "Shopping", range: [30, 200] },
-    { name: "Walmart", category: "Shopping", range: [25, 120] },
-    { name: "Best Buy", category: "Electronics", range: [50, 500] },
+    { name: "Amazon", category: "Shopping", range: [20, 150] as [number, number] },
+    { name: "Target", category: "Shopping", range: [30, 200] as [number, number] },
+    { name: "Walmart", category: "Shopping", range: [25, 120] as [number, number] },
+    { name: "Best Buy", category: "Electronics", range: [50, 500] as [number, number] },
   ],
   utilities: [
     { name: "Electric Company", amount: 85.5, category: "Utilities" },
@@ -30,8 +30,8 @@ const sampleMerchants = {
     { name: "Gas Company", amount: 62.3, category: "Utilities" },
   ],
   transportation: [
-    { name: "Uber", category: "Transportation", range: [12, 35] },
-    { name: "Gas Station", category: "Transportation", range: [40, 80] },
+    { name: "Uber", category: "Transportation", range: [12, 35] as [number, number] },
+    { name: "Gas Station", category: "Transportation", range: [40, 80] as [number, number] },
     { name: "Public Transit", amount: 2.75, category: "Transportation" },
   ],
   income: [
