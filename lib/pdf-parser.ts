@@ -47,11 +47,38 @@ export class PDFParser {
     }
   }
 
-  private categorizeTransaction(description: string, amount: number, descText?: string): string {
+  private categorizeTransaction(description: string, amount: number, descText?: string, n26Category?: string): string {
     const desc = description.toLowerCase();
     const fullDesc = (descText || description).toLowerCase();
 
-    // First check if N26 has already provided a category (German categories)
+    // First priority: Use N26's explicitly provided category if available
+    if (n26Category) {
+      const n26Cat = n26Category.toLowerCase();
+      const n26Mapping: { [key: string]: string } = {
+        'lebensmittel': 'Groceries',
+        'bars & restaurants': 'Bars & Restaurants',
+        'transport': 'Transport',
+        'medien & telekom': 'Media & Telecom',
+        'freizeit': 'Leisure',
+        'shopping': 'Shopping',
+        'auto': 'Automotive',
+        'sonstiges': 'Other',
+        'health & insurance': 'Health & Insurance',
+        'rent': 'Rent',
+        'education': 'Education',
+        'banking fees': 'Banking Fees',
+        'transfers': 'Transfers'
+      };
+
+      for (const [key, mappedCategory] of Object.entries(n26Mapping)) {
+        if (n26Cat.includes(key)) {
+          console.log(`Mapped N26 category "${n26Category}" → "${mappedCategory}"`);
+          return mappedCategory;
+        }
+      }
+    }
+
+    // Second check: Look for N26 categories in the full description text (fallback)
     const n26Categories = categoriesConfig.categorizationRules.n26BankCategories;
     for (const [pattern, category] of Object.entries(n26Categories)) {
       if (fullDesc.includes(pattern)) {
@@ -150,9 +177,30 @@ export class PDFParser {
       // Remove common patterns and extract the merchant/description
       descText = descText.trim();
 
-      // Try to extract the main description (merchant name)
-      // Pattern 1: If it contains Mastercard/Lastschriften/Gutschriften, text before that is the merchant
+      // Try to extract the main description (merchant name) and N26 category
+      // Pattern: "Merchant Name\nMastercard • Category\nWertstellung..."
       let description = '';
+      let n26Category = '';
+      let isTransfer = false;
+
+      // Check if this is a person-to-person transfer (has IBAN/BIC)
+      const hasIBAN = descText.match(/IBAN:\s*[A-Z]{2}\d{2}[A-Z0-9]+/i);
+      const hasBIC = descText.match(/BIC:\s*[A-Z0-9]+/i);
+
+      if ((descText.includes('Belastungen') || descText.includes('Gutschriften')) && (hasIBAN || hasBIC)) {
+        isTransfer = true;
+        n26Category = 'Transfers';
+        console.log('Detected person-to-person transfer (IBAN/BIC found)');
+      }
+
+      // Extract N26 category if it exists (format: "Mastercard • Category" or "Payment Method • Category")
+      if (!isTransfer) {
+        const categoryMatch = descText.match(/(?:Mastercard|Lastschriften|Gutschriften|Belastungen)\s*•\s*([^\n]+)/i);
+        if (categoryMatch) {
+          n26Category = categoryMatch[1].trim();
+          console.log(`Found N26 category: "${n26Category}"`);
+        }
+      }
 
       if (descText.includes('Mastercard')) {
         description = descText.split('Mastercard')[0].trim().split(/\s{2,}/).pop() || '';
@@ -180,6 +228,9 @@ export class PDFParser {
       }
 
       console.log(`Transaction ${i}: ${description} | ${date.toLocaleDateString()} | ${amount}€`);
+      if (n26Category) {
+        console.log(`  N26 Category: ${n26Category}`);
+      }
 
       const transaction: Transaction = {
         id: `txn-${transactionId++}`,
@@ -187,7 +238,7 @@ export class PDFParser {
         date: date,
         amount: Math.abs(amount),
         currency: 'EUR',
-        category: this.categorizeTransaction(description, amount, descText),
+        category: this.categorizeTransaction(description, amount, descText, n26Category),
         type: amount >= 0 ? 'income' : 'expense',
       };
 

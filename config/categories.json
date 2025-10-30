@@ -61,7 +61,9 @@
         "lidl",
         "kaufland",
         "lebensmittel",
-        "market"
+        "market",
+        "rossmann",
+        "dm"
       ],
       "Transport": [
         "uber",
@@ -88,7 +90,8 @@
         "kahve",
         "kafe",
         "pide",
-        "pastanesi"
+        "pastanesi",
+        "gida"
       ],
       "Shopping": [
         "amazon",
@@ -114,7 +117,8 @@
         "fitness",
         "sport",
         "beach",
-        "otelcilik"
+        "otelcilik",
+        "mcv"
       ],
       "Rent": [
         "studentenwerk",
@@ -123,7 +127,9 @@
       ],
       "Education": [
         "student",
-        "schueler"
+        "schueler",
+        "universität",
+        "university"
       ],
       "Banking Fees": [
         "n26 ratenzahlung",
@@ -136,7 +142,8 @@
         "virman",
         "transfer to",
         "instant transfer",
-        "sepa"
+        "sepa",
+        "paypal"
       ]
     }
   }
