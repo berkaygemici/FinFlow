@@ -1,6 +1,7 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { Transaction, Statement } from '@/types';
 import categoriesConfig from '@/config/categories.json';
+import { db } from './db';
 
 // Configure PDF.js worker - using local worker file to avoid CORS issues
 if (typeof window !== 'undefined') {
@@ -12,7 +13,40 @@ interface ParsedLine {
   y: number;
 }
 
+interface AICategorizeResponse {
+  categorizedTransactions: {
+    description: string;
+    category: string;
+  }[];
+}
+
 export class PDFParser {
+  private async categorizeWithAI(transactions: { description: string }[]): Promise<string[]> {
+    try {
+      const response = await fetch('/api/categorize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          categories: categoriesConfig.categories,
+          transactions: transactions,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('AI categorization failed:', await response.text());
+        return transactions.map(() => 'Other');
+      }
+
+      const data: AICategorizeResponse = await response.json();
+      return data.categorizedTransactions.map(t => t.category);
+    } catch (error) {
+      console.error('Error in AI categorization:', error);
+      return transactions.map(() => 'Other');
+    }
+  }
+
   private categorizeTransaction(description: string, amount: number, descText?: string): string {
     const desc = description.toLowerCase();
     const fullDesc = (descText || description).toLowerCase();
@@ -176,6 +210,37 @@ export class PDFParser {
     if (transactions.length > 0) {
       console.log('First transaction:', transactions[0]);
       console.log('Last transaction:', transactions[transactions.length - 1]);
+    }
+
+    // Check if AI categorization is enabled
+    const settings = await db.settings.get('default');
+    if (settings?.aiCategorizationEnabled && transactions.length > 0) {
+      console.log('AI categorization is enabled, processing transactions...');
+
+      try {
+        // Extract descriptions for AI processing
+        const transactionDescriptions = transactions.map(t => ({
+          description: t.description
+        }));
+
+        // Get AI categories
+        const aiCategories = await this.categorizeWithAI(transactionDescriptions);
+
+        // Update transaction categories with AI results
+        transactions.forEach((transaction, index) => {
+          if (aiCategories[index]) {
+            transaction.category = aiCategories[index];
+            console.log(`AI categorized: ${transaction.description} → ${aiCategories[index]}`);
+          }
+        });
+
+        console.log('AI categorization completed successfully');
+      } catch (error) {
+        console.error('Failed to apply AI categorization:', error);
+        // Continue with manual categorization if AI fails
+      }
+    } else {
+      console.log('AI categorization is disabled, using manual categorization');
     }
 
     // Extract opening and closing balances from N26 summary

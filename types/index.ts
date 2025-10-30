@@ -67,3 +67,8 @@ export interface MonthlyTrend {
   expenses: number;
   net: number;
 }
+
+export interface Settings {
+  id: string;
+  aiCategorizationEnabled: boolean;
+}

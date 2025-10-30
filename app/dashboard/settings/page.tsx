@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { motion } from "framer-motion";
 import {
@@ -10,13 +10,15 @@ import {
   Download,
   FileDown,
   AlertTriangle,
+  Sparkles,
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { CategoryRule, DEFAULT_CATEGORIES } from "@/types";
+import { Switch } from "@/components/ui/switch";
+import { CategoryRule, DEFAULT_CATEGORIES, Settings } from "@/types";
 import Papa from "papaparse";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -24,13 +26,40 @@ import html2canvas from "html2canvas";
 export default function SettingsPage() {
   const categoryRules = useLiveQuery(() => db.categoryRules.toArray());
   const statements = useLiveQuery(() => db.statements.toArray());
+  const settings = useLiveQuery(() => db.settings.get("default"));
 
   const [showAddRule, setShowAddRule] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState(false);
   const [newRule, setNewRule] = useState({
     pattern: "",
     category: "",
   });
+
+  // Initialize settings on mount
+  useEffect(() => {
+    const initSettings = async () => {
+      const existingSettings = await db.settings.get("default");
+      if (!existingSettings) {
+        // Create default settings
+        await db.settings.add({
+          id: "default",
+          aiCategorizationEnabled: false,
+        });
+        setAiEnabled(false);
+      } else {
+        setAiEnabled(existingSettings.aiCategorizationEnabled);
+      }
+    };
+    initSettings();
+  }, []);
+
+  // Update state when settings change
+  useEffect(() => {
+    if (settings) {
+      setAiEnabled(settings.aiCategorizationEnabled);
+    }
+  }, [settings]);
 
   const handleAddRule = async () => {
     if (!newRule.pattern || !newRule.category) return;
@@ -49,6 +78,14 @@ export default function SettingsPage() {
 
   const handleDeleteRule = async (id: string) => {
     await db.categoryRules.delete(id);
+  };
+
+  const handleToggleAI = async (enabled: boolean) => {
+    await db.settings.put({
+      id: "default",
+      aiCategorizationEnabled: enabled,
+    });
+    setAiEnabled(enabled);
   };
 
   const handleDeleteAllData = async () => {
@@ -131,11 +168,46 @@ export default function SettingsPage() {
         </p>
       </motion.div>
 
-      {/* Export Section */}
+      {/* AI Categorization Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
+      >
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              <CardTitle>AI Categorization</CardTitle>
+            </div>
+            <CardDescription>
+              Use AI to automatically categorize transactions based on their descriptions
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between p-4 rounded-lg border">
+              <div className="flex-1">
+                <p className="font-medium mb-1">Enable AI Categorization</p>
+                <p className="text-sm text-muted-foreground">
+                  When enabled, AI will analyze transaction descriptions and assign categories automatically.
+                  If AI cannot determine a category, it will default to "Other".
+                </p>
+              </div>
+              <Switch
+                checked={aiEnabled}
+                onCheckedChange={handleToggleAI}
+                className="ml-4"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Export Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
       >
         <Card>
           <CardHeader>
@@ -159,7 +231,7 @@ export default function SettingsPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
+        transition={{ delay: 0.3 }}
       >
         <Card>
           <CardHeader>
@@ -268,7 +340,7 @@ export default function SettingsPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.4 }}
       >
         <Card>
           <CardHeader>

@@ -12,6 +12,7 @@
     "Salary",
     "Education",
     "Banking Fees",
+    "Transfers",
     "Other"
   ],
   "categoryColors": {
@@ -27,6 +28,7 @@
     "Salary": "hsl(45, 93%, 47%)",
     "Education": "hsl(168, 76%, 42%)",
     "Banking Fees": "hsl(280, 67%, 55%)",
+    "Transfers": "hsl(180, 62%, 55%)",
     "Other": "hsl(0, 0%, 60%)"
   },
   "categorizationRules": {
@@ -126,6 +128,15 @@
       "Banking Fees": [
         "n26 ratenzahlung",
         "belastungen"
+      ],
+      "Transfers": [
+        "transfer",
+        "überweisung",
+        "geldtransfer",
+        "virman",
+        "transfer to",
+        "instant transfer",
+        "sepa"
       ]
     }
   }
