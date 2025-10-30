@@ -12,28 +12,69 @@ import {
   Clock,
   BarChart3,
   Filter,
+  Trash2,
+  Plus,
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { RecurringTransactionGroup } from "@/types";
 import { getRecurringGroups } from "@/lib/process-recurring";
 import { getRecurringSummary } from "@/lib/recurring-detector";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  getMergedSubscriptions,
+  getUnconfirmedSubscriptions,
+  removeSubscription,
+} from "@/lib/subscription-manager";
+import SubscriptionOnboarding from "@/components/subscription-onboarding";
+import SearchAddSubscriptionDialog from "@/components/search-add-subscription-dialog";
 
 export default function SubscriptionsPage() {
   const statements = useLiveQuery(() => db.statements.toArray());
   const [recurringGroups, setRecurringGroups] = useState<RecurringTransactionGroup[]>([]);
+  const [unconfirmedGroups, setUnconfirmedGroups] = useState<RecurringTransactionGroup[]>([]);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [filterType, setFilterType] = useState<"all" | "subscriptions" | "recurring">("all");
   const [sortBy, setSortBy] = useState<"amount" | "frequency" | "merchant">("amount");
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   useEffect(() => {
     if (!statements || statements.length === 0) return;
 
-    getRecurringGroups().then((groups) => {
+    // Load merged subscriptions (auto-detected + user-managed)
+    getMergedSubscriptions().then((groups) => {
       setRecurringGroups(groups);
     });
+
+    // Check for unconfirmed subscriptions
+    getUnconfirmedSubscriptions().then((unconfirmed) => {
+      setUnconfirmedGroups(unconfirmed);
+      setShowOnboarding(unconfirmed.length > 0);
+    });
+  }, [statements, refreshKey]);
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    setRefreshKey((prev) => prev + 1); // Refresh the list
+  };
+
+  const handleRemoveSubscription = async (subscriptionId: string) => {
+    await removeSubscription(subscriptionId);
+    setRefreshKey((prev) => prev + 1); // Refresh the list
+  };
+
+  const handleAddSuccess = () => {
+    setRefreshKey((prev) => prev + 1); // Refresh the list
+  };
+
+  // Get all transactions for the search dialog
+  const allTransactions = useMemo(() => {
+    if (!statements) return [];
+    return statements.flatMap((s) => s.transactions);
   }, [statements]);
 
   // Filter groups based on selected type
@@ -105,7 +146,8 @@ export default function SubscriptionsPage() {
     );
   }
 
-  if (recurringGroups.length === 0) {
+  // If there are no recurring groups and no unconfirmed groups, show empty state
+  if (recurringGroups.length === 0 && unconfirmedGroups.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[600px] space-y-4">
         <Repeat className="w-16 h-16 text-muted-foreground" />
@@ -117,6 +159,35 @@ export default function SubscriptionsPage() {
     );
   }
 
+  // If there are unconfirmed subscriptions, show ONLY the onboarding (full screen)
+  if (showOnboarding && unconfirmedGroups.length > 0) {
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Welcome to Subscriptions</h1>
+              <p className="text-muted-foreground">
+                We detected some recurring transactions. Let's review them together.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Full-screen Onboarding */}
+        <SubscriptionOnboarding
+          subscriptions={unconfirmedGroups}
+          onComplete={handleOnboardingComplete}
+        />
+      </div>
+    );
+  }
+
+  // Show the main subscriptions page after onboarding is complete
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -131,6 +202,10 @@ export default function SubscriptionsPage() {
               Track and manage your recurring expenses and subscriptions
             </p>
           </div>
+          <Button onClick={() => setShowAddDialog(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Subscription
+          </Button>
         </div>
       </motion.div>
 
@@ -335,6 +410,11 @@ export default function SubscriptionsPage() {
                               Subscription
                             </Badge>
                           )}
+                          {group.isUserManaged && (
+                            <Badge variant="outline" className="text-xs">
+                              Confirmed
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground mb-2">
                           {group.category} • {group.frequency} payment
@@ -357,7 +437,7 @@ export default function SubscriptionsPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="text-right ml-4 flex-shrink-0">
+                    <div className="text-right ml-4 flex-shrink-0 flex flex-col items-end">
                       <p className="text-lg font-bold">
                         {formatCurrency(group.averageAmount)}
                       </p>
@@ -369,6 +449,15 @@ export default function SubscriptionsPage() {
                           ±{group.variance.toFixed(1)}% variance
                         </p>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleRemoveSubscription(group.id)}
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Remove
+                      </Button>
                     </div>
                   </div>
 
@@ -451,6 +540,14 @@ export default function SubscriptionsPage() {
           </Card>
         </motion.div>
       )}
+
+      {/* Search and Add Subscription Dialog */}
+      <SearchAddSubscriptionDialog
+        allTransactions={allTransactions}
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        onSuccess={handleAddSuccess}
+      />
     </div>
   );
 }

@@ -6,8 +6,10 @@ const KNOWN_SUBSCRIPTIONS = [
   "youtube", "google", "microsoft", "adobe", "dropbox", "icloud",
   "gym", "fitness", "mcfit", "fitnessstudio",
   "insurance", "versicherung", "barmer", "tk", "aok", "allianz", "mcv",
-  "internet", "telekom", "vodafone", "o2", "1&1", "unitymedia",
-  "miete", "rent", "vermietung", "landlord"
+  "internet", "telekom", "vodafone", "o2", "1&1", "unitymedia", "telefonica",
+  "miete", "rent", "vermietung", "landlord",
+  "navigo", "bvg", "deutschlandticket", // Transport subscriptions
+  "n26 ratenzahlung", "ratenzahlung", "installment" // Installment payments
 ];
 
 // Categories that should NEVER be marked as subscriptions
@@ -15,8 +17,17 @@ const EXCLUDED_CATEGORIES = [
   "Groceries",
   "Shopping",
   "Bars & Restaurants",
-  "Transport",
   "Other"
+];
+
+// Known transport subscriptions that should NOT be excluded
+const TRANSPORT_SUBSCRIPTIONS = [
+  "navigo",
+  "bvg",
+  "deutschlandticket",
+  "klimaticket",
+  "mvg",
+  "hvv"
 ];
 
 // Keywords that indicate a merchant is NOT a subscription
@@ -96,10 +107,10 @@ function daysDifference(date1: Date, date2: Date): number {
 }
 
 /**
- * Determine if amounts are similar (within 5% variance for subscriptions, 15% for others)
+ * Determine if amounts are similar (within 10% variance for subscriptions, 20% for others)
  */
 function areAmountsSimilar(amount1: number, amount2: number, isSubscription: boolean): boolean {
-  const threshold = isSubscription ? 0.05 : 0.15; // 5% for subscriptions, 15% for others
+  const threshold = isSubscription ? 0.10 : 0.20; // 10% for subscriptions, 20% for others
   const diff = Math.abs(amount1 - amount2);
   const avg = (Math.abs(amount1) + Math.abs(amount2)) / 2;
   return diff / avg <= threshold;
@@ -141,21 +152,18 @@ function detectFrequency(intervals: number[]): "weekly" | "monthly" | "yearly" |
   const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
   const maxDeviation = Math.max(...intervals.map(i => Math.abs(i - avgInterval)));
 
-  // Allow 7 days deviation for detection
-  const tolerance = 7;
-
-  // Weekly: ~7 days (allow 3-11 days)
-  if (avgInterval >= 3 && avgInterval <= 11 && maxDeviation <= tolerance) {
+  // Weekly: ~7 days (allow 3-14 days with 10 day tolerance)
+  if (avgInterval >= 3 && avgInterval <= 14 && maxDeviation <= 10) {
     return "weekly";
   }
 
-  // Monthly: ~30 days (allow 25-35 days)
-  if (avgInterval >= 25 && avgInterval <= 35 && maxDeviation <= tolerance) {
+  // Monthly: ~30 days (allow 23-38 days with 12 day tolerance)
+  if (avgInterval >= 23 && avgInterval <= 38 && maxDeviation <= 12) {
     return "monthly";
   }
 
-  // Yearly: ~365 days (allow 350-380 days)
-  if (avgInterval >= 350 && avgInterval <= 380 && maxDeviation <= tolerance * 2) {
+  // Yearly: ~365 days (allow 340-390 days with 30 day tolerance)
+  if (avgInterval >= 340 && avgInterval <= 390 && maxDeviation <= 30) {
     return "yearly";
   }
 
@@ -215,7 +223,7 @@ export function detectRecurringTransactions(
       const isSubscription = isLikelySubscription(merchantName, transaction.category);
 
       if (
-        similarity >= 0.8 && // Increased from 0.7 to be more strict
+        similarity >= 0.7 && // Relaxed to catch more similar merchants
         areAmountsSimilar(transaction.amount, firstTransaction.amount, isSubscription)
       ) {
         groupTransactions.push(transaction);
@@ -234,8 +242,8 @@ export function detectRecurringTransactions(
   const recurringGroups: RecurringTransactionGroup[] = [];
 
   for (const [, transactions] of Array.from(potentialGroups.entries())) {
-    // Need at least 3 transactions to confirm a pattern
-    if (transactions.length < 3) continue;
+    // Only need 2 transactions minimum
+    if (transactions.length < 2) continue;
 
     // Sort by date
     transactions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -243,8 +251,11 @@ export function detectRecurringTransactions(
     const lastTransaction = transactions[transactions.length - 1];
     const merchantName = lastTransaction.merchantName || normalizeMerchantName(lastTransaction.description);
 
-    // Skip if category is excluded (groceries, shopping, etc.)
-    if (EXCLUDED_CATEGORIES.includes(lastTransaction.category)) {
+    // Skip if category is excluded, unless it's a known transport subscription
+    const isTransportSubscription = lastTransaction.category === "Transport" &&
+      TRANSPORT_SUBSCRIPTIONS.some(sub => merchantName.includes(sub));
+
+    if (EXCLUDED_CATEGORIES.includes(lastTransaction.category) && !isTransportSubscription) {
       continue;
     }
 
@@ -258,7 +269,21 @@ export function detectRecurringTransactions(
     // Detect frequency
     const frequency = detectFrequency(intervals);
 
-    if (!frequency) continue;
+    // If we have only 2 transactions and no clear frequency detected, try to infer it
+    let inferredFrequency = frequency;
+    if (!frequency && transactions.length === 2 && intervals.length === 1) {
+      const interval = intervals[0];
+      // Be more lenient for 2 transactions
+      if (interval >= 20 && interval <= 40) {
+        inferredFrequency = "monthly";
+      } else if (interval >= 340 && interval <= 400) {
+        inferredFrequency = "yearly";
+      } else if (interval >= 3 && interval <= 15) {
+        inferredFrequency = "weekly";
+      }
+    }
+
+    if (!inferredFrequency) continue;
 
     // Calculate statistics
     const amounts = transactions.map(t => Math.abs(t.amount));
@@ -267,24 +292,29 @@ export function detectRecurringTransactions(
     const minAmount = Math.min(...amounts);
     const variance = ((maxAmount - minAmount) / averageAmount) * 100;
 
-    // Determine if this is a subscription with stricter rules
+    // Use the inferred frequency for the rest of the logic
+    const finalFrequency = inferredFrequency;
+
+    // Determine if this is a subscription with relaxed rules
     const isInKnownList = isLikelySubscription(merchantName, lastTransaction.category);
-    const hasLowVariance = variance < 3; // Reduced from 5 to 3
+    const hasLowVariance = variance < 10; // Relaxed from 3 to 10
     const isDirectDebit = transactions.some(t => isLastschrift(t.description));
 
     // A transaction is a subscription if:
     // 1. It's in the known subscriptions list, OR
     // 2. It's a Lastschrift (direct debit), OR
-    // 3. It has very low variance (<3%) AND is monthly/yearly frequency
+    // 3. It has low variance (<10%) AND is monthly/yearly frequency
     const isSubscription = isInKnownList || isDirectDebit ||
-                          (hasLowVariance && (frequency === "monthly" || frequency === "yearly"));
+                          (hasLowVariance && (finalFrequency === "monthly" || finalFrequency === "yearly"));
 
-    // Mark all transactions in this group as recurring
-    const groupId = crypto.randomUUID();
+    // Create a deterministic ID based on merchant name and frequency
+    // This ensures the same subscription gets the same ID across page loads
+    const groupId = `${merchantName.replace(/\s+/g, '-')}_${finalFrequency}_${Math.round(averageAmount * 100)}`;
+
     transactions.forEach(t => {
       t.isRecurring = true;
       t.recurringGroupId = groupId;
-      t.recurringFrequency = frequency;
+      t.recurringFrequency = finalFrequency;
       t.merchantName = merchantName;
     });
 
@@ -293,10 +323,10 @@ export function detectRecurringTransactions(
       merchantName,
       category: lastTransaction.category,
       averageAmount,
-      frequency,
+      frequency: finalFrequency,
       transactions,
       isSubscription,
-      nextExpectedDate: calculateNextExpectedDate(new Date(lastTransaction.date), frequency),
+      nextExpectedDate: calculateNextExpectedDate(new Date(lastTransaction.date), finalFrequency),
       lastTransactionDate: new Date(lastTransaction.date),
       variance
     });

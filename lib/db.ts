@@ -1,5 +1,5 @@
 import Dexie, { Table } from 'dexie';
-import { Statement, CategoryRule, Budget, Settings, SavedFilter } from '@/types';
+import { Statement, CategoryRule, Budget, Settings, SavedFilter, UserSubscription } from '@/types';
 
 export class FinanceDB extends Dexie {
   statements!: Table<Statement>;
@@ -7,6 +7,7 @@ export class FinanceDB extends Dexie {
   budgets!: Table<Budget>;
   settings!: Table<Settings>;
   savedFilters!: Table<SavedFilter>;
+  userSubscriptions!: Table<UserSubscription>;
 
   constructor() {
     super('FinanceDB');
@@ -31,6 +32,16 @@ export class FinanceDB extends Dexie {
       budgets: 'id, category, period',
       settings: 'id',
       savedFilters: 'id, name, createdAt, lastUsed'
+    });
+
+    // Version 4: Add user subscriptions
+    this.version(4).stores({
+      statements: 'id, fileName, month, year, uploadDate',
+      categoryRules: 'id, pattern, category',
+      budgets: 'id, category, period',
+      settings: 'id',
+      savedFilters: 'id, name, createdAt, lastUsed',
+      userSubscriptions: 'id, merchantName, isHidden, createdAt'
     });
   }
 }

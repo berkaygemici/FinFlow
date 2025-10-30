@@ -5,17 +5,26 @@ import { db } from "@/lib/db";
 import { Statement, Transaction, TransactionFilters as FilterType } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDownIcon, TrendingDown, Calendar, CreditCard, BarChart3 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ArrowDownIcon, TrendingDown, Calendar, CreditCard, BarChart3, Repeat } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useState, useMemo } from "react";
 import { TransactionFilters } from "@/components/transaction-filters";
 import { applyTransactionFilters, sortTransactions } from "@/lib/filter-utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import AddSubscriptionDialog from "@/components/add-subscription-dialog";
 
 export default function ExpensesPage() {
   const statements = useLiveQuery(() => db.statements.toArray()) || [];
   const [filters, setFilters] = useState<FilterType>({ type: "expense" });
   const [sortBy, setSortBy] = useState("date-desc");
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [showAddSubscriptionDialog, setShowAddSubscriptionDialog] = useState(false);
+
+  const handleMarkAsSubscription = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setShowAddSubscriptionDialog(true);
+  };
 
   // Get all expense transactions
   const allExpenses = useMemo(() => {
@@ -261,6 +270,12 @@ export default function ExpensesPage() {
                       <Badge variant="outline" className="shrink-0">
                         {expense.category}
                       </Badge>
+                      {expense.isRecurring && (
+                        <Badge variant="secondary" className="shrink-0 text-xs">
+                          <Repeat className="w-3 h-3 mr-1" />
+                          Recurring
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>{formatDate(expense.date)}</span>
@@ -272,10 +287,20 @@ export default function ExpensesPage() {
                       )}
                     </div>
                   </div>
-                  <div className="text-right ml-4">
-                    <p className="text-lg font-bold text-red-500">
-                      {formatCurrency(expense.amount)}
-                    </p>
+                  <div className="flex items-center gap-3 ml-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleMarkAsSubscription(expense)}
+                    >
+                      <Repeat className="w-4 h-4 mr-1" />
+                      Mark as Subscription
+                    </Button>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-red-500">
+                        {formatCurrency(expense.amount)}
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -283,6 +308,16 @@ export default function ExpensesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Add Subscription Dialog */}
+      <AddSubscriptionDialog
+        transaction={selectedTransaction}
+        open={showAddSubscriptionDialog}
+        onOpenChange={setShowAddSubscriptionDialog}
+        onSuccess={() => {
+          // Subscription added successfully
+        }}
+      />
     </div>
   );
 }

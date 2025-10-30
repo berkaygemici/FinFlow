@@ -109,4 +109,20 @@ export interface RecurringTransactionGroup {
   nextExpectedDate?: Date;
   lastTransactionDate: Date;
   variance: number; // Amount variance percentage
+  isUserManaged?: boolean; // True if manually added/confirmed by user
+  isHidden?: boolean; // True if user removed this subscription
+}
+
+// User-managed subscriptions stored in DB
+export interface UserSubscription {
+  id: string;
+  merchantName: string;
+  category: string;
+  amount: number;
+  frequency: "weekly" | "monthly" | "yearly";
+  transactionIds: string[]; // IDs of transactions in this subscription
+  isConfirmed: boolean; // True if user confirmed, false if user added manually
+  isHidden: boolean; // True if user removed/hid this subscription
+  createdAt: Date;
+  updatedAt: Date;
 }
