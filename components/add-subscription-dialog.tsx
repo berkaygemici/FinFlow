@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Repeat } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -39,10 +40,16 @@ export default function AddSubscriptionDialog({
     setIsAdding(true);
     try {
       await addSubscriptionFromTransaction(transaction, frequency);
+      toast.success("Subscription added successfully", {
+        description: `${transaction.description} has been marked as a ${frequency} subscription.`,
+      });
       onSuccess?.();
       onOpenChange(false);
     } catch (error) {
       console.error("Error adding subscription:", error);
+      toast.error("Failed to add subscription", {
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
+      });
     } finally {
       setIsAdding(false);
     }

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Search, Plus, X, ArrowRight, Calendar } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -106,6 +107,9 @@ export default function SearchAddSubscriptionDialog({
     setIsAdding(true);
     try {
       await addSubscriptionFromVendor(selectedVendor.vendorName, selectedVendor.transactions);
+      toast.success("Subscription added successfully", {
+        description: `${selectedVendor.vendorName} has been added to your subscriptions.`,
+      });
       onSuccess?.();
       onOpenChange(false);
       // Reset state
@@ -113,6 +117,9 @@ export default function SearchAddSubscriptionDialog({
       setSelectedVendor(null);
     } catch (error) {
       console.error("Error adding subscription:", error);
+      toast.error("Failed to add subscription", {
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
+      });
     } finally {
       setIsAdding(false);
     }

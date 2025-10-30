@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import {
   Shield,
   Upload,
@@ -97,9 +98,16 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         isDemoMode: true,
       });
 
+      toast.success("Demo data loaded successfully", {
+        description: "You can now explore all features with sample data.",
+      });
+
       onComplete();
     } catch (error) {
       console.error("Error loading sample data:", error);
+      toast.error("Failed to load sample data", {
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
+      });
       setLoading(false);
     }
   };
@@ -114,9 +122,16 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         onboardingCompleted: true,
       });
 
+      toast.success("Welcome to your finance dashboard", {
+        description: "You can now start uploading your bank statements.",
+      });
+
       onComplete();
     } catch (error) {
       console.error("Error completing onboarding:", error);
+      toast.error("Failed to complete onboarding", {
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
+      });
       setLoading(false);
     }
   };

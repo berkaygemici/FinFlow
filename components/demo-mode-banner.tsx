@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, X, Trash2, Upload } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { db } from "@/lib/db";
@@ -43,10 +44,17 @@ export default function DemoModeBanner({ onExitDemo }: DemoModeBannerProps) {
         isDemoMode: false,
       });
 
+      toast.success("Demo mode exited successfully", {
+        description: "All sample data has been cleared. You can now upload your own data.",
+      });
+
       setShowDialog(false);
       onExitDemo();
     } catch (error) {
       console.error("Error exiting demo mode:", error);
+      toast.error("Failed to exit demo mode", {
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
+      });
       setLoading(false);
     }
   };

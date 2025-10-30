@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2, XCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import { pdfParser } from "@/lib/pdf-parser";
 import { db } from "@/lib/db";
 import { Card, CardContent } from "@/components/ui/card";
@@ -71,10 +72,14 @@ export function PDFUpload({ onUploadComplete }: PDFUploadProps) {
       updateFileStatus(index, { status: "success", progress: 100 });
     } catch (error) {
       console.error("Error parsing PDF:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to parse PDF";
       updateFileStatus(index, {
         status: "error",
-        error: error instanceof Error ? error.message : "Failed to parse PDF",
+        error: errorMessage,
         progress: 0,
+      });
+      toast.error(`Failed to upload ${file.name}`, {
+        description: errorMessage,
       });
     }
   };
@@ -99,14 +104,26 @@ export function PDFUpload({ onUploadComplete }: PDFUploadProps) {
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
     // Check if all succeeded
-    const allSucceeded = initialStatuses.every(
-      (_, index) => fileStatuses[index]?.status === "success"
-    );
+    const successCount = fileStatuses.filter((s) => s.status === "success").length;
+    const failedCount = fileStatuses.filter((s) => s.status === "error").length;
 
     setIsProcessing(false);
 
+    // Show summary toast
+    if (successCount > 0) {
+      if (failedCount === 0) {
+        toast.success(`Successfully uploaded ${successCount} file${successCount > 1 ? 's' : ''}`, {
+          description: "Your bank statements have been processed and saved.",
+        });
+      } else {
+        toast.warning(`Uploaded ${successCount} of ${files.length} files`, {
+          description: `${failedCount} file${failedCount > 1 ? 's' : ''} failed to upload.`,
+        });
+      }
+    }
+
     // Call completion callback after a short delay
-    if (allSucceeded || fileStatuses.some((s) => s.status === "success")) {
+    if (successCount > 0) {
       setTimeout(() => {
         onUploadComplete?.();
       }, 1000);
