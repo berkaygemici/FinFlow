@@ -129,7 +129,7 @@ Return the JSON object with categorized results.`;
         console.log('OpenAI API response ok:', response.ok);
       } catch (abortError) {
         clearTimeout(timeoutId);
-        if (abortError.name === 'AbortError') {
+        if (abortError instanceof Error && abortError.name === 'AbortError') {
           console.error('Request timed out after 60 seconds');
           return NextResponse.json(
             {
