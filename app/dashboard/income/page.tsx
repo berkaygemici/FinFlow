@@ -2,20 +2,20 @@
 
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
-import { Statement, Transaction } from "@/types";
+import { Statement, Transaction, TransactionFilters as FilterType } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { ArrowUpIcon, TrendingUp, Calendar, Wallet, BarChart3, PiggyBank } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useState, useMemo } from "react";
+import { TransactionFilters } from "@/components/transaction-filters";
+import { applyTransactionFilters, sortTransactions } from "@/lib/filter-utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function IncomePage() {
   const statements = useLiveQuery(() => db.statements.toArray()) || [];
-  const [searchTerm, setSearchTerm] = useState("");
+  const [filters, setFilters] = useState<FilterType>({ type: "income" });
   const [sortBy, setSortBy] = useState("date-desc");
-  const [amountFilter, setAmountFilter] = useState("all");
 
   // Get all income transactions
   const allIncome = useMemo(() => {
@@ -50,39 +50,9 @@ export default function IncomePage() {
 
   // Filter and sort income
   const filteredIncome = useMemo(() => {
-    let filtered = allIncome.filter((income) => {
-      const matchesSearch = income.description.toLowerCase().includes(searchTerm.toLowerCase());
-
-      let matchesAmount = true;
-      if (amountFilter === "small") {
-        matchesAmount = income.amount < 500;
-      } else if (amountFilter === "medium") {
-        matchesAmount = income.amount >= 500 && income.amount < 2000;
-      } else if (amountFilter === "large") {
-        matchesAmount = income.amount >= 2000;
-      }
-
-      return matchesSearch && matchesAmount;
-    });
-
-    // Sort
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case "date-desc":
-          return new Date(b.date).getTime() - new Date(a.date).getTime();
-        case "date-asc":
-          return new Date(a.date).getTime() - new Date(b.date).getTime();
-        case "amount-desc":
-          return b.amount - a.amount;
-        case "amount-asc":
-          return a.amount - b.amount;
-        default:
-          return 0;
-      }
-    });
-
-    return filtered;
-  }, [allIncome, searchTerm, sortBy, amountFilter]);
+    const filtered = applyTransactionFilters(allIncome, filters) as (Transaction & { statementMonth: string })[];
+    return sortTransactions(filtered, sortBy) as (Transaction & { statementMonth: string })[];
+  }, [allIncome, filters, sortBy]);
 
   // Calculate metrics
   const metrics = useMemo(() => {
@@ -296,41 +266,23 @@ export default function IncomePage() {
       </Card>
 
       {/* Filters */}
+      <TransactionFilters
+        filters={filters}
+        onFiltersChange={setFilters}
+        showTypeFilter={false}
+      />
+
+      {/* Sort and Results Info */}
       <Card>
-        <CardHeader>
-          <CardTitle>Filter & Sort</CardTitle>
-          <CardDescription>Refine your income view</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-3">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Search</label>
-              <Input
-                placeholder="Search by source..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Showing {filteredIncome.length} of {allIncome.length} income transactions
             </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Amount Range</label>
-              <Select value={amountFilter} onValueChange={setAmountFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Amounts" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Amounts</SelectItem>
-                  <SelectItem value="small">&lt; €500</SelectItem>
-                  <SelectItem value="medium">€500 - €2,000</SelectItem>
-                  <SelectItem value="large">&gt; €2,000</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Sort By</label>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Sort By</label>
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger>
+                <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Date (Newest)" />
                 </SelectTrigger>
                 <SelectContent>
@@ -341,23 +293,6 @@ export default function IncomePage() {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              Showing {filteredIncome.length} of {allIncome.length} income transactions
-            </span>
-            {(searchTerm || amountFilter !== "all") && (
-              <button
-                onClick={() => {
-                  setSearchTerm("");
-                  setAmountFilter("all");
-                }}
-                className="text-primary hover:underline"
-              >
-                Clear filters
-              </button>
-            )}
           </div>
         </CardContent>
       </Card>

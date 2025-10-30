@@ -2,21 +2,20 @@
 
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
-import { Statement, Transaction } from "@/types";
+import { Statement, Transaction, TransactionFilters as FilterType } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { ArrowDownIcon, TrendingDown, Calendar, CreditCard, BarChart3, DollarSign } from "lucide-react";
+import { ArrowDownIcon, TrendingDown, Calendar, CreditCard, BarChart3 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useState, useMemo } from "react";
+import { TransactionFilters } from "@/components/transaction-filters";
+import { applyTransactionFilters, sortTransactions } from "@/lib/filter-utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function ExpensesPage() {
   const statements = useLiveQuery(() => db.statements.toArray()) || [];
-  const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [filters, setFilters] = useState<FilterType>({ type: "expense" });
   const [sortBy, setSortBy] = useState("date-desc");
-  const [amountFilter, setAmountFilter] = useState("all");
 
   // Get all expense transactions
   const allExpenses = useMemo(() => {
@@ -42,40 +41,9 @@ export default function ExpensesPage() {
 
   // Filter and sort expenses
   const filteredExpenses = useMemo(() => {
-    let filtered = allExpenses.filter((expense) => {
-      const matchesSearch = expense.description.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = categoryFilter === "all" || expense.category === categoryFilter;
-
-      let matchesAmount = true;
-      if (amountFilter === "small") {
-        matchesAmount = Math.abs(expense.amount) < 20;
-      } else if (amountFilter === "medium") {
-        matchesAmount = Math.abs(expense.amount) >= 20 && Math.abs(expense.amount) < 100;
-      } else if (amountFilter === "large") {
-        matchesAmount = Math.abs(expense.amount) >= 100;
-      }
-
-      return matchesSearch && matchesCategory && matchesAmount;
-    });
-
-    // Sort
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case "date-desc":
-          return new Date(b.date).getTime() - new Date(a.date).getTime();
-        case "date-asc":
-          return new Date(a.date).getTime() - new Date(b.date).getTime();
-        case "amount-desc":
-          return Math.abs(b.amount) - Math.abs(a.amount);
-        case "amount-asc":
-          return Math.abs(a.amount) - Math.abs(b.amount);
-        default:
-          return 0;
-      }
-    });
-
-    return filtered;
-  }, [allExpenses, searchTerm, categoryFilter, sortBy, amountFilter]);
+    const filtered = applyTransactionFilters(allExpenses, filters) as (Transaction & { statementMonth: string })[];
+    return sortTransactions(filtered, sortBy) as (Transaction & { statementMonth: string })[];
+  }, [allExpenses, filters, sortBy]);
 
   // Calculate metrics
   const metrics = useMemo(() => {
@@ -236,58 +204,24 @@ export default function ExpensesPage() {
       </div>
 
       {/* Filters */}
+      <TransactionFilters
+        filters={filters}
+        onFiltersChange={setFilters}
+        availableCategories={categories}
+        showTypeFilter={false}
+      />
+
+      {/* Sort and Results Info */}
       <Card>
-        <CardHeader>
-          <CardTitle>Filter & Sort</CardTitle>
-          <CardDescription>Refine your expense view</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Search</label>
-              <Input
-                placeholder="Search by description..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Showing {filteredExpenses.length} of {allExpenses.length} expenses
             </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Category</label>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Amount Range</label>
-              <Select value={amountFilter} onValueChange={setAmountFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Amounts" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Amounts</SelectItem>
-                  <SelectItem value="small">&lt; €20</SelectItem>
-                  <SelectItem value="medium">€20 - €100</SelectItem>
-                  <SelectItem value="large">&gt; €100</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Sort By</label>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Sort By</label>
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger>
+                <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Date (Newest)" />
                 </SelectTrigger>
                 <SelectContent>
@@ -298,24 +232,6 @@ export default function ExpensesPage() {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              Showing {filteredExpenses.length} of {allExpenses.length} expenses
-            </span>
-            {(searchTerm || categoryFilter !== "all" || amountFilter !== "all") && (
-              <button
-                onClick={() => {
-                  setSearchTerm("");
-                  setCategoryFilter("all");
-                  setAmountFilter("all");
-                }}
-                className="text-primary hover:underline"
-              >
-                Clear filters
-              </button>
-            )}
           </div>
         </CardContent>
       </Card>

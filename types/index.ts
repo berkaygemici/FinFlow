@@ -72,3 +72,23 @@ export interface Settings {
   id: string;
   aiCategorizationEnabled: boolean;
 }
+
+export interface TransactionFilters {
+  searchTerm?: string;
+  categories?: string[];
+  type?: "income" | "expense" | "all";
+  dateFrom?: Date;
+  dateTo?: Date;
+  amountMin?: number;
+  amountMax?: number;
+  month?: number;
+  year?: number;
+}
+
+export interface SavedFilter {
+  id: string;
+  name: string;
+  filters: TransactionFilters;
+  createdAt: Date;
+  lastUsed?: Date;
+}
