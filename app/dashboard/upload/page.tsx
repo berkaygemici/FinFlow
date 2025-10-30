@@ -26,9 +26,9 @@ export default function UploadPage() {
             <FileText className="w-8 h-8 text-primary" />
           </div>
         </div>
-        <h1 className="text-3xl font-bold">Upload Bank Statement</h1>
+        <h1 className="text-3xl font-bold">Upload Bank Statements</h1>
         <p className="text-muted-foreground mt-2">
-          Upload your PDF bank statement to analyze your finances
+          Upload one or multiple PDF bank statements to analyze your finances
         </p>
       </motion.div>
 
@@ -48,10 +48,10 @@ export default function UploadPage() {
       >
         <h3 className="font-semibold">How it works:</h3>
         <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
-          <li>Drag and drop your bank statement PDF or click to browse</li>
+          <li>Drag and drop one or multiple PDF bank statements or click to browse</li>
+          <li>Watch real-time progress as each file is processed simultaneously</li>
           <li>The app will automatically parse and categorize your transactions</li>
           <li>View your financial insights in the dashboard</li>
-          <li>Upload multiple months to see trends over time</li>
         </ol>
       </motion.div>
     </div>
