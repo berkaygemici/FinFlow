@@ -76,6 +76,8 @@ export interface MonthlyTrend {
 export interface Settings {
   id: string;
   aiCategorizationEnabled: boolean;
+  onboardingCompleted?: boolean;
+  isDemoMode?: boolean;
 }
 
 export interface TransactionFilters {

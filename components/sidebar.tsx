@@ -16,10 +16,13 @@ import {
   TrendingDown,
   ArrowUpCircle,
   Repeat,
+  Sparkles,
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "@/lib/db";
 
 const navigation = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
@@ -36,6 +39,7 @@ const navigation = [
 export function Sidebar() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
+  const settings = useLiveQuery(() => db.settings.get("default"));
 
   return (
     <motion.aside
@@ -43,12 +47,26 @@ export function Sidebar() {
       animate={{ x: 0 }}
       className="flex flex-col w-64 min-h-screen border-r bg-card"
     >
-      <div className="flex items-center gap-2 p-6 border-b">
-        <Wallet className="w-8 h-8 text-primary" />
-        <div>
-          <h1 className="text-xl font-bold">Finance</h1>
-          <p className="text-xs text-muted-foreground">Dashboard</p>
+      <div className="p-6 border-b space-y-3">
+        <div className="flex items-center gap-2">
+          <Wallet className="w-8 h-8 text-primary" />
+          <div>
+            <h1 className="text-xl font-bold">Finance</h1>
+            <p className="text-xs text-muted-foreground">Dashboard</p>
+          </div>
         </div>
+        {settings?.isDemoMode && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20"
+          >
+            <Sparkles className="w-4 h-4 text-blue-500" />
+            <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+              Demo Mode Active
+            </span>
+          </motion.div>
+        )}
       </div>
 
       <nav className="flex-1 p-4 space-y-2">

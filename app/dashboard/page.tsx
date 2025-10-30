@@ -24,9 +24,14 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getRecurringGroups } from "@/lib/process-recurring";
 import { getRecurringSummary } from "@/lib/recurring-detector";
+import Onboarding from "@/components/onboarding";
+import DemoModeBanner from "@/components/demo-mode-banner";
 
 export default function DashboardPage() {
   const statements = useLiveQuery(() => db.statements.toArray());
+  const settings = useLiveQuery(() => db.settings.get("default"));
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [stats, setStats] = useState({
     totalIncome: 0,
     totalExpenses: 0,
@@ -44,6 +49,11 @@ export default function DashboardPage() {
     monthlyTotal: 0,
     yearlyTotal: 0,
   });
+
+  // Check if onboarding should be shown
+  useEffect(() => {
+    setShowOnboarding(settings === undefined || !settings?.onboardingCompleted);
+  }, [settings]);
 
   useEffect(() => {
     if (!statements || statements.length === 0) return;
@@ -156,6 +166,11 @@ export default function DashboardPage() {
     </motion.div>
   );
 
+  // Show onboarding for first-time users
+  if (showOnboarding) {
+    return <Onboarding onComplete={() => setShowOnboarding(false)} />;
+  }
+
   if (!statements || statements.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[600px] space-y-4">
@@ -174,6 +189,11 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Demo Mode Banner */}
+      {settings?.isDemoMode && (
+        <DemoModeBanner onExitDemo={() => setRefreshKey(prev => prev + 1)} />
+      )}
+
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
